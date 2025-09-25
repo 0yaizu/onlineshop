@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, render_template, request, redirect, url_for
+import time
 
 app = Flask(__name__)
 app.secret_key = "onlineshop"
@@ -14,6 +15,7 @@ def login():
 	username = None
 	password = None
 	if request.method == "POST":
+		time.sleep(3)
 		username = request.form.get("username")
 		password = request.form.get("password")
 		print(username)
