@@ -3,17 +3,27 @@
 {% block title %}Index | onlinshop{% endblock %}
 
 {% block content %}
-<div class="page-header">
-	<h1>Index</h1>
-</div>
-{% if username %}
-<p>Welcome, {{ username }}!</p>
-{% else %}
-<p>Welcome!</p>
-{% endif %}
-<ul>
-	{% for item in items %}
-	<li>{{ item }}</li>
+<div class="page-header"><h1>Index</h1></div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+	{% if messages %}
+		{% for category, message in messages %}
+		<div class="alert alert-{{ category }}"> {{ message|capitalize }} </div>
+		{% endfor %}
+	{% endif %}
+{% endwith %}
+
+{% if form %}
+	{% for field in form.errors %}
+		{% for error in form.errors[field] %}
+		<div class="alert alert-danger">{{ error }}</div>
+		{% endfor %}
 	{% endfor %}
-</ul>
+{% endif %}
+
+{% if username %}
+	<p>Welcome, {{ username }}!</p>
+{% else %}
+	<p>Welcome!</p>
+{% endif %}
 {% endblock %}
