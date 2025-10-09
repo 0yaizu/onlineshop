@@ -17,7 +17,14 @@ import dataaccess as da
 def index():
 	if not "username" in session:
 		session["username"] = "student1"
-	return render_template("index.html")
+	
+	# セッションでnの値を管理（初回は0、その後はインクリメント）
+	if "n" not in session:
+		session["n"] = 0
+	else:
+		session["n"] += 1
+	
+	return render_template("index.html", n=session["n"])
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
