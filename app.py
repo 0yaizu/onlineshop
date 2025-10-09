@@ -1,18 +1,42 @@
 # app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import check_password_hash
 from forms import *
 from models import *
 import os
+from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "onlineshop")
 app.config["WTF_CSRF_SECRET_KEY"] = os.environ.get("WTF_CSRF_SECRET_KEY", "onlineshop")
+app.config["SESSION_COOKIE_SECURE"] = bool(int(os.environ.get("SESSION_COOKIE_SECURE", 1))) # HTTPS必須(本番環境にて有効化する)
+app.config["SESSION_COOKIE_HTTPONLY"] = bool(int(os.environ.get("SESSION_COOKIE_HTTPONLY", 1))) # JSから参照不可
+app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax") # CSRF経路を抑制
 
 from flask_wtf.csrf import CSRFProtect
 csrf = CSRFProtect(app)
 
 import dataaccess as da
+
+@app.before_request
+def check_session_timeout():
+	SESSION_TIMEOUT = 30 * 60
+	if "username" not in session:
+		return
+
+	now = datetime.now(timezone.utc)
+
+	last_seen = session.get("last_seen")
+	if last_seen:
+		last_seen = datetime.fromisoformat(last_seen)
+  
+		diff_seconds = (now - last_seen).total_seconds()
+		if diff_seconds > SESSION_TIMEOUT:
+			session.clear()
+			flash("Session timed out. Please log in again.", category="danger")
+			return redirect(url_for("login"))
+
+	session["last_seen"] = now.isoformat()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -33,6 +57,11 @@ def login():
 			flash("Username or Password is wrong.", category="danger")
 			return redirect(url_for("login"))
 
+		session.clear()
+		session.permanent = True
+		session["username"] = user.username
+		session["last_seen"] = datetime.now(timezone.utc).isoformat()
+  
 		flash("You are now logged in.", category="success")
 		return redirect(url_for("index"))
 
@@ -49,6 +78,30 @@ def logout():
 		return redirect(url_for("index"))
 
 	return render_template("logout.html", form=form)
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+	form = SignupForm()
+
+	if form.validate_on_submit():
+		username = form.username.data
+		password = form.password.data
+		confirmed_password = form.confirmed_password.data
+
+		user = da.search_user(username)
+		if user:
+			flash("This username is already used.", category="danger")
+			return redirect(url_for("signup"))
+
+		user = User()
+		user.username = username
+		user.password = generate_password_hash(password)
+		user = da.add_user(user)
+
+		flash("You are Sign Up.", category="success")
+		return redirect(url_for("index"))
+
+	return render_template("signup.html", form=form)
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=8080, debug=True)
