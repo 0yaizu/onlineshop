@@ -1,9 +1,10 @@
 # app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import check_password_hash, generate_password_hash
 from forms import *
 from models import *
 import os
+from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "onlineshop")
@@ -16,6 +17,26 @@ from flask_wtf.csrf import CSRFProtect
 csrf = CSRFProtect(app)
 
 import dataaccess as da
+
+@app.before_request
+def check_session_timeout():
+	SESSION_TIMEOUT = 30 * 60
+	if "username" not in session:
+		return
+
+	now = datetime.now(timezone.utc)
+
+	last_seen = session.get("last_seen")
+	if last_seen:
+		last_seen = datetime.fromisoformat(last_seen)
+  
+		diff_seconds = (now - last_seen).total_seconds()
+		if diff_seconds > SESSION_TIMEOUT:
+			session.clear()
+			flash("Session timed out. Please log in again.", category="danger")
+			return redirect(url_for("login"))
+
+	session["last_seen"] = now.isoformat()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -37,7 +58,10 @@ def login():
 			return redirect(url_for("login"))
 
 		session.clear()
+		session.permanent = True
 		session["username"] = user.username
+		session["last_seen"] = datetime.now(timezone.utc).isoformat()
+  
 		flash("You are now logged in.", category="success")
 		return redirect(url_for("index"))
 
@@ -58,6 +82,7 @@ def logout():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
 	form = SignupForm()
+
 	if form.validate_on_submit():
 		username = form.username.data
 		password = form.password.data
