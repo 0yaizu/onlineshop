@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "onlineshop")
 app.config["WTF_CSRF_SECRET_KEY"] = os.environ.get("WTF_CSRF_SECRET_KEY", "onlineshop")
-# app.config["SESSION_COOKIE_SECURE"] = bool(int(os.environ.get("SESSION_COOKIE_SECURE", 1))) # HTTPS必須(本番環境にて有効化する)
+app.config["SESSION_COOKIE_SECURE"] = bool(int(os.environ.get("SESSION_COOKIE_SECURE", 1))) # HTTPS必須(本番環境にて有効化する)
 app.config["SESSION_COOKIE_HTTPONLY"] = bool(int(os.environ.get("SESSION_COOKIE_HTTPONLY", 1))) # JSから参照不可
 app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax") # CSRF経路を抑制
 

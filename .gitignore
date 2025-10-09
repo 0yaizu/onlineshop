@@ -13,3 +13,6 @@ venv/
 
 # database files
 instance/database.db
+
+# openssl key files
+*.pem
