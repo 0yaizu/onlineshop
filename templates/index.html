@@ -22,7 +22,7 @@
 {% endif %}
 
 {% if username %}
-	<p>Welcome, {{ username }}!</p>
+	<p>Welcome, {{ session["username"] }}!</p>
 {% else %}
 	<p>Welcome!</p>
 {% endif %}
