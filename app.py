@@ -36,6 +36,8 @@ def login():
 			flash("Username or Password is wrong.", category="danger")
 			return redirect(url_for("login"))
 
+		session.clear()
+		session["username"] = user.username
 		flash("You are now logged in.", category="success")
 		return redirect(url_for("index"))
 
