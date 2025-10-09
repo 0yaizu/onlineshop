@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash
 from forms import *
 from models import *
 import os
@@ -48,20 +49,6 @@ def logout():
 		return redirect(url_for("index"))
 
 	return render_template("logout.html", form=form)
-
-from werkzeug.security import generate_password_hash, check_password_hash
-
-@app.route("/to_hashed_password", methods=["GET"])
-def to_hashed_password():
-	user = da.search_user("admin")
-	hashed = generate_password_hash(user.password)
-	user.password = hashed
-	da.edit_user(user)
-	user = da.search_user("user")
-	hashed = generate_password_hash(user.password)
-	user.password = hashed
-	da.edit_user(user)
-	return "hashed"
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=8080, debug=True)
