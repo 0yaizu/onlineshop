@@ -128,7 +128,7 @@ def remove_user(user):
 
 def search_items_by_owner_id(owner_id):
 	query = """
-		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price
+		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price, items.file_name, items.file_type
 		FROM items, users
 		WHERE items.owner_id = ?
 		AND items.owner_id = users.id
@@ -146,6 +146,8 @@ def search_items_by_owner_id(owner_id):
 			item.owner_name = r["owner_name"]
 			item.item_name = r["item_name"]
 			item.price = r["price"]
+			item.file_name = r["file_name"]
+			item.file_type = r["file_type"]
 			item_list.append(item)
 		return item_list
 	finally:
@@ -153,8 +155,7 @@ def search_items_by_owner_id(owner_id):
 
 def search_items_by_item_name(item_name):
 	query = """
-	SELECT items.id, items.owner_id, users.username AS owner_name,
-	items.item_name, items.price
+	SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price
 	FROM items, users
 	WHERE item_name LIKE ?
 	AND items.owner_id = users.id
@@ -162,35 +163,7 @@ def search_items_by_item_name(item_name):
 	con = get_connection()
 	try:
 		cur = con.cursor()
-		cur.execute(query, ("%" + item_name + "%",))
-		res = cur.fetchall()
-		item_list = []
-		for r in res:
-			item = Item()
-			item.id = r["id"]
-			item.owner_id = r["owner_id"]
-			item.owner_name = r["owner_name"]
-			item.item_name = r["item_name"]
-			item.price = r["price"]
-			item_list.append(item)
-		return item_list
-	except Exception:
-		con.rollback()
-		raise
-	finally:
-		con.close()
-
-# ---------- Items ----------
-def search_items():
-	query = """
-		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price
-		FROM items, users
-		WHERE users.id = items.owner_id
-	"""
-	con = get_connection()
-	try:
-		cur = con.cursor()
-		cur.execute(query)
+		cur.execute(query, (f"%{item_name}%",))
 		rows = cur.fetchall()
 		items = []
 		for row in rows:
@@ -205,12 +178,34 @@ def search_items():
 	finally:
 		con.close()
 
+# ---------- Items ----------
+def search_items():
+	query = "SELECT * FROM items"
+	con = get_connection()
+	try:
+		cur = con.cursor()
+		cur.execute(query)
+		rows = cur.fetchall()
+		items = []
+		for row in rows:
+			it = Item()
+			it.id = row["id"]
+			it.owner_id = row["owner_id"]
+			it.item_name = row["item_name"]
+			it.price = row["price"]
+			it.file_name = row["file_name"]
+			it.file_type = row["file_type"]
+			items.append(it)
+		return items
+	finally:
+		con.close()
+
 def search_item_by_id(id):
 	query = """
-		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price
-		FROM items, users
-		WHERE items.id = ?
-		AND users.id = items.owner_id
+	SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price, items.file_name, items.file_type
+	FROM items, users
+	WHERE items.id = ?
+	AND users.id = items.owner_id
 	"""
 	con = get_connection()
 	try:
@@ -225,13 +220,15 @@ def search_item_by_id(id):
 		it.owner_name = row["owner_name"]
 		it.item_name = row["item_name"]
 		it.price = row["price"]
+		it.file_name = row["file_name"]
+		it.file_type = row["file_type"]
 		return it
 	finally:
 		con.close()
 
 def search_item(item_name):
 	query = """
-		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price
+		SELECT items.id, items.owner_id, users.username AS owner_name, items.item_name, items.price, items.file_name, items.file_type
 		FROM items, users
 		WHERE item_name LIKE ?
 		AND items.owner_id = users.id
@@ -249,6 +246,8 @@ def search_item(item_name):
 			it.owner_name = row["owner_name"]
 			it.item_name = row["item_name"]
 			it.price = row["price"]
+			it.file_name = row["file_name"]
+			it.file_type = row["file_type"]
 			items.append(it)
 			return items
 	finally:
@@ -256,12 +255,12 @@ def search_item(item_name):
 
 def add_item(item):
 	query = """
-	INSERT INTO items (owner_id, item_name, price) VALUES (?, ?, ?)
+		INSERT INTO items (owner_id, item_name, price, file_name, file_type) VALUES (?, ?, ?, ?, ?)
 	"""
 	con = get_connection(autocommit=False)
 	try:
 		cur = con.cursor()
-		cur.execute(query, (item.owner_id, item.item_name, item.price))
+		cur.execute(query, (item.owner_id, item.item_name, item.price, item.file_name, item.file_type))
 		item.id = cur.lastrowid
 		con.commit()
 		return item
@@ -270,6 +269,7 @@ def add_item(item):
 		raise
 	finally:
 		con.close()
+
 def edit_item(item):
 	query = "UPDATE items SET owner_id = ?, item_name = ?, price = ? WHERE id = ?"
 	con = get_connection(autocommit=False)

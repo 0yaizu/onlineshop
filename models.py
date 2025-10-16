@@ -10,8 +10,12 @@ class User:
 class Item:
 	def __init__(self):
 		self.id = None
+		self.owner_id = None
+		self.owner_name = None
 		self.name = None
 		self.price = None
+		self.file_name = None
+		self.file_type = None
 
 	def __repr__(self):
 		return "<Item %r>" % self.id

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Search Item | onlineshop{% endblock %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>Search Item</h1>
+	</div>
+
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }}"> {{ message|capitalize }} </div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	{% if form %}
+		{% for field in form.errors %}
+			{% for error in form.errors[field] %}
+				<div class="alert alert-danger">{{ error }}</div>
+			{% endfor %}
+		{% endfor %}
+	{% endif %}
+
+	{% if form %}
+		<form action="{{ url_for('searchitem') }}" method="POST" novalidate class="mb-10">
+			<div class="form-group">
+				<label for="item_name">{{ form.item_name.label }}</label>
+				{{ form.item_name(id="item_name", class="form-control", placeholder="Enter keyword") }}
+			</div>
+			{{ form.csrf_token }}
+			<input type="reset" class="btn btn-light" value="Reset">
+			{{ form.submit(class="btn btn-primary") }}
+		</form>
+	{% endif %}
+
+	{% if item_list %}
+		<table class="table align-middle">
+			<thead>
+				<tr>
+					<th scope="col">Image</th>
+					<th scope="col">Item</th>
+					<th scope="col">Owner</th>
+					<th scope="col">Price</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for item in item_list %}
+					<tr>
+						<td style="width:100px">
+							{% if item.file_name %}
+								<a href="{{ url_for('item_detail', item_id=item.id) }}">
+									<img src="{{ url_for('uploaded_file', filename=item.file_name) }}" alt="{{ item.item_name }}" width="80">
+								</a>
+							{% else %}
+								-
+							{% endif %}
+						</td>
+						<td><a href="{{ url_for('item_detail', item_id=item.id) }}">{{ item.item_name }}</a></td>
+						<td>{{ item.owner_name }}</td>
+						<td>{{ item.price }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% endif %}
+{% endblock %}

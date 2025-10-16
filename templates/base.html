@@ -18,11 +18,17 @@
 			</button>
 			<div class="collapse navbar-collapse" id="navbarNav">
 				<ul class="navbar-nav ms-auto">
-					{% if not "username" in session %}
+					{% if "username" not in session %}
 					<li class="nav-item">
 						<a class="nav-link" href="{{ url_for('login') }}">Login</a>
 					</li>
 					{% else %}
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('additem') }}">Add Item</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('shopping') }}">Shopping</a>
+					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
 					</li>

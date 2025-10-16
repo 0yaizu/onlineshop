@@ -16,3 +16,6 @@ instance/database.db
 
 # openssl
 *.pem
+
+# .DS_Store
+.DS_Store

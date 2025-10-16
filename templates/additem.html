@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Add Item | onlinshop{% endblock %}
+
+{% block content %}
+	<div class="page-header">
+		<h1>Add Item</h1>
+	</div>
+
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }}"> {{ message|capitalize }} </div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	{% if form %}
+		{% for field in form.errors %}
+			{% for error in form.errors[field] %}
+				<div class="alert alert-danger">{{ error }}</div>
+			{% endfor %}
+		{% endfor %}
+	{% endif %}
+
+	{% if form %}
+		<form action="{{ url_for('additem') }}" method="POST" enctype="multipart/form-data" novalidate class="mb-10">
+			<div class="form-group">
+				<label for="item_name">{{ form.item_name.label }}</label>
+				{{ form.item_name(id="item_name", class="form-control", placeholder="Enter item name") }}
+			</div>
+			<div class="form-group">
+				<label for="price">{{ form.price.label }}</label>
+				{{ form.price(id="price", class="form-control", placeholder="Enter Price") }}
+			</div>
+			<div class="form-group">
+				<label for="file">{{ form.file.label }}</label>
+				{{ form.file(id="file", class="form-control", placeholder="Select Image File", accept=".png,.jpg,.jpeg,.gif,.webp") }}
+			</div>
+			{{ form.csrf_token }}
+			<input type="reset" class="btn btn-light" value="Reset">
+			{{ form.submit(class="btn btn-primary") }}
+		</form>
+	{% endif %}
+
+	{% if item_list %}
+		<table class="table">
+			<thead>
+				<tr>
+					<th scope="col">ID</th>
+					<th scope="col">Owner Name</th>
+					<th scope="col">Item Name</th>
+					<th scope="col">Price</th>
+					<th scope="col">Image</th>
+					<th scope="col">Detail</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for item in item_list %}
+					<tr>
+						<th scope="row">{{ item.id }}</th>
+						<td>{{ item.owner_name }}</td>
+						<td>{{ item.item_name }}</td>
+						<td>{{ item.price }}</td>
+						<td>
+							{% if item.file_name %}
+								<img src="{{ url_for('uploaded_file', filename=item.file_name) }}" alt="{{ item.item_name }}" width="100">
+							{% else %}
+								-
+							{% endif %}
+						</td>
+						<td><a href="{{ url_for('item_detail', item_id=item.id) }}">View</a></td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% endif %}
+{% endblock %}
