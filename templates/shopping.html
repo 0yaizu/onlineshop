@@ -24,7 +24,7 @@
 	{% endif %}
 
 	{% if form %}
-		<form action="{{ url_for('searchitem') }}" method="POST" novalidate class="mb-10">
+		<form action="{{ url_for('shopping') }}" method="POST" novalidate class="mb-10">
 			<div class="form-group">
 				<label for="item_name">{{ form.item_name.label }}</label>
 				{{ form.item_name(id="item_name", class="form-control", placeholder="Enter keyword") }}

@@ -107,3 +107,36 @@ class ShoppingForm(FlaskForm):
 
 	def copy_to(self, item):
 		item.item_name = self.item_name.data
+
+class AddToCartForm(FlaskForm):
+	item_id = IntegerField(
+		"Item ID",
+		validators=[DataRequired(message="Item ID is required.")],
+	)
+	quantity = IntegerField(
+		"Quantity",
+		validators=[DataRequired(message="Quantity is required.")],
+		default=1,
+	)
+	submit = SubmitField("Add to Cart")
+
+class UpdateCartForm(FlaskForm):
+	item_id = IntegerField(
+		"Item ID",
+		validators=[DataRequired(message="Item ID is required.")],
+	)
+	quantity = IntegerField(
+		"Quantity",
+		validators=[DataRequired(message="Quantity is required.")],
+	)
+	submit = SubmitField("Update")
+
+class RemoveFromCartForm(FlaskForm):
+	item_id = IntegerField(
+		"Item ID",
+		validators=[DataRequired(message="Item ID is required.")],
+	)
+	submit = SubmitField("Remove")
+
+class CheckOutForm(FlaskForm):
+	submit = SubmitField("Checkout")

@@ -30,6 +30,11 @@
 						<a class="nav-link" href="{{ url_for('shopping') }}">Shopping</a>
 					</li>
 					<li class="nav-item">
+					{% set cart = session.get('cart') if session.get('cart') is mapping else {} %}
+					{% set cart_qty = (cart.values()|sum) if cart else 0 %}
+					<a class="nav-link" href="{{ url_for('cart') }}">Cart ( {{ cart_qty }} )</a>
+					</li>
+					<li class="nav-item">
 						<a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
 					</li>
 					{% endif %}

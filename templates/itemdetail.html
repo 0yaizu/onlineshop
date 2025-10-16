@@ -26,9 +26,9 @@
 				<dt class="col-sm-3">Item ID</dt>
 				<dd class="col-sm-9">{{ item.id }}</dd>
 			</dl>
-			
-			<a class="btn btn-primary">Add to cart</a>
-			<a class="btn btn-outline-secondary">Back to list</a>
+
+			<a class="btn btn-primary" href="{{ url_for('cart_add') }}?item_id={{ item.id }}">Add to cart</a>
+			<a class="btn btn-outline-secondary" href="{{ url_for('shopping') }}">Back to list</a>
 		</div>
 	</div>
 {% endblock %}

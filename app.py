@@ -159,7 +159,7 @@ def shopping():
 
 	if form.validate_on_submit():
 		q = (form.item_name.data or "").strip()
-		return redirect(url_for("searchitem", q=q))
+		return redirect(url_for("shopping", q=q))
 
 	q = (request.args.get("q") or "").strip()
 	if q:
@@ -182,6 +182,254 @@ def item_detail(item_id):
 		flash("Item not found.", "danger")
 		return redirect(url_for("searchitem"))
 	return render_template("itemdetail.html", item=item)
+
+def get_cart():
+	cart = session.get("cart")
+	if not isinstance(cart, dict):
+		cart = {}
+	return cart
+
+def save_cart(cart: dict):
+	cleaned = {}
+	for k, v in cart.items():
+		try:
+			qty = int(v)
+		except (TypeError, ValueError):
+			continue
+		if qty <= 0:
+			continue
+		cleaned[str(k)] = qty
+	session["cart"] = cleaned
+ 
+@app.route("/cart", methods=["GET"])
+def cart():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+
+	form = CheckOutForm()
+
+	cart_dict = get_cart()
+
+	items = []
+	total = 0
+	for sid, quantity in cart_dict.items():
+		try:
+			item_id = int(sid)
+			quantity = int(quantity)
+		except Exception:
+			continue
+		if quantity <= 0:
+			continue
+
+		it = da.search_item_by_id(item_id)
+		if not it:
+			continue
+
+		it.quantity = quantity
+		it.subtotal = it.price * quantity
+
+		items.append(it)
+		total += it.subtotal
+
+	return render_template("cart.html", form=form, item_list=items, total=total)
+
+@app.route("/cart/add", methods=["POST"])
+def cart_add():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+
+	form = AddToCartForm()
+
+	if form.validate_on_submit():
+		item_id = int(form.item_id.data)
+		quantity = max(1, int(form.quantity.data))
+		if not da.search_item_by_id(item_id):
+			flash("Item not found.", "danger")
+			return redirect(url_for("cart"))
+
+		cart_dict = get_cart()
+		cart_dict[str(item_id)] = cart_dict.get(str(item_id), 0) + quantity
+
+		save_cart(cart_dict)
+		flash("Added to cart.", "success")
+		return redirect(url_for("cart"))
+	flash("Failed to add item to cart.", "danger")
+	return redirect(url_for("cart"))
+
+@app.route("/cart/update", methods=["POST"])
+def cart_update():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+
+	form = UpdateCartForm()
+ 
+	if form.validate_on_submit():
+		item_id = int(form.item_id.data)
+		quantity = int(form.quantity.data)
+		cart_dict = get_cart()
+		if quantity <= 0:
+			cart_dict.pop(str(item_id), None)
+		else:
+			if not da.search_item_by_id(item_id):
+				flash("Item not found.", "danger")
+				return redirect(url_for("cart"))
+			cart_dict[str(item_id)] = quantity
+
+		save_cart(cart_dict)
+		flash("Updated cart.", "info")
+		return redirect(url_for("cart"))
+
+	flash("Failed to update cart.", "danger")
+	return redirect(url_for("cart"))
+
+@app.route("/cart/remove", methods=["POST"])
+def cart_remove():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+
+	form = RemoveFromCartForm()
+
+	if form.validate_on_submit():
+		item_id = int(form.item_id.data)
+		cart_dict = get_cart()
+		cart_dict.pop(str(item_id), None)
+		save_cart(cart_dict)
+		flash("Removed from cart.", "warning")
+		return redirect(url_for("cart"))
+
+	flash("Failed to remove item.", "danger")
+	return redirect(url_for("cart"))
+
+def _new_order_code():
+	now_utc = datetime.now(timezone.utc)
+	now_local = now_utc.astimezone()
+	ts = now_local.strftime("%Y%m%d_%H%M%S")
+	rand6 = uuid4().hex[:6]
+	order_code = ts + "_" + rand6
+	return order_code
+
+@app.route("/checkout", methods=["GET", "POST"])
+def checkout():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+	
+	form = CheckOutForm()
+	
+	if form.validate_on_submit():
+		cart_dict = get_cart()
+		if not cart_dict:
+			flash("Cart is empty.", "warning")
+			return redirect(url_for("cart"))
+		
+		user = da.search_user(session["username"])
+		if not user:
+			flash("User not found.", "danger")
+			return redirect(url_for("cart"))
+		
+		order_code = _new_order_code()
+		order_list = []
+		
+		for sid, qty in cart_dict.items():
+			try:
+				item_id = int(sid)
+				quantity = int(qty)
+			except Exception:
+				continue
+			if quantity <= 0:
+				continue
+			
+			item = da.search_item_by_id(item_id)
+			if not item:
+				continue
+			
+			od = Order()
+			od.order_code = order_code
+			od.user_id = user.id
+			od.item_id = item_id
+			od.quantity = quantity
+			od.price = item.price
+			order_list.append(od)
+		
+		if not order_list:
+			flash("Cart items are no longer available.", "warning")
+			save_cart({})
+			return redirect(url_for("cart"))
+		
+		try:
+			da.add_order(order_list)
+		except Exception:
+			app.logger.exception("checkout failed")
+			flash("Failed to checkout due to server error.", "danger")
+			return redirect(url_for("cart"))
+		
+		save_cart({})
+		return redirect(url_for("checkout") + f"?order_code={order_code}")
+	
+	order_code = request.args.get("order_code")
+	if not order_code:
+		return redirect(url_for("cart"))
+	
+	user = da.search_user(session["username"])
+	if not user:
+		flash("User not found.", "danger")
+		return redirect(url_for("shopping"))
+	
+	lines = da.search_order_lines(order_code, user_id=user.id)
+	if not lines:
+		flash("Order not found.", "warning")
+		return redirect(url_for("shopping"))
+	
+	total = 0
+	for ln in lines:
+		ln["subtotal"] = ln["price"] * ln["quantity"]
+		total += ln["subtotal"]
+	
+	return render_template("checkout.html", order_code=order_code, items=lines, total=total)
+
+@app.route("/orders", methods=["GET"])
+def orders():
+	if "username" not in session:
+		flash("Log in is required.", "danger")
+		return redirect(url_for("login"))
+	
+	user = da.search_user(session["username"])
+	if not user:
+		flash("User not found.", "danger")
+		return redirect(url_for("shopping"))
+	
+	# 該当ユーザーの注文行を取得
+	rows = da.search_orders_by_user(user.id)
+	
+	# order_code ごとにまとめ、表示用情報を付与
+	groups = {}  # order_code -> {"order_code":..., "lines":[...], "total":int}
+	order_groups = []
+	
+	for od in rows:
+		code = od.order_code
+		if code not in groups:
+			groups[code] = {"order_code": code, "lines": [], "total": 0}
+			order_groups.append(groups[code])
+		
+		# 名称・画像・出品者名を表示に利用
+		item = da.search_item_by_id(od.item_id)
+		line = {
+			"item_id": od.item_id,
+			"item_name": item.item_name if item else f"#{od.item_id}",
+			"owner_name": item.owner_name if item else "-",
+			"file_name": item.file_name if item else None,
+			"price": od.price,
+			"quantity": od.quantity,
+			"subtotal": od.price * od.quantity,
+		}
+		groups[code]["lines"].append(line)
+		groups[code]["total"] += line["subtotal"]
+	
+	return render_template("orders.html", order_groups=order_groups)
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=8080, debug=True)
